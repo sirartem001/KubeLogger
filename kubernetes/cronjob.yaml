@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: log-archiver
+spec:
+  schedule: "*/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: archiver
+            image: curlimages/curl:latest
+            command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              mkdir -p /tmp/logs
+              curl -s http://logging-service/logs > /tmp/logs/app-logs.json
+              TIMESTAMP=$(date +%s)
+              tar -czf /tmp/app-logs-$TIMESTAMP.tar.gz -C /tmp/logs .
+              ls -lh /tmp/*.tar.gz
+            volumeMounts:
+            - name: temp-volume
+              mountPath: /tmp
+          restartPolicy: OnFailure
+          volumes:
+          - name: temp-volume
+            emptyDir: {}
